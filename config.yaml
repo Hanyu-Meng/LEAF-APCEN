@@ -1,0 +1,84 @@
+# config.yaml for Leaf training and evaluation
+# change frontend, only need to change the frontend argument
+# for clean data, set dynamic to false
+# for dynamic noisy data, set the data_type to babble, or music
+# for dynamic loudness data, set, the data_type to loudness
+train: true
+eval: false
+comment: "revised_20250906"
+cont: false
+epoch: 0
+fold: 5
+decay: 0.0001
+# backend options
+cudnn_deterministic_toggle: true
+cudnn_benchmark_toggle: true
+gpu: 0
+
+# Model and logging paths
+model_path: /media/mengh/SharedData/hanyu/Adaptive_PCEN/new_adaptive_pcen/checkpoints
+log_path: /media/mengh/SharedData/hanyu/Adaptive_PCEN/new_adaptive_pcen/logs
+output_dir: /media/mengh/SharedData/hanyu/Adaptive_PCEN/new_adaptive_pcen/outputs
+
+# Model backend and structure
+back_end: EfficientNetB0
+nb_classes: 8
+
+# Optimizer and training tweaks
+weight_decay: 0.00001
+frontend_lr: 0.0001
+scheduler_warmup: false
+
+ret_network: false
+frontend_benchmark: false
+benchmark-runs: 100
+
+seed: 0
+device: cuda
+resume: true
+cudnn_benchmark: true
+
+batch_size: 100
+batch_size_eval: 0
+num_epochs: 300
+start_epoch: 1
+save_every: 5      
+test_every_epoch: false
+
+lr: 0.0001
+frontend_lr_factor: 1.0
+adam_eps: 1e-08
+warmup_steps: 0
+
+scheduler: true
+scheduler_mode: loss
+scheduler_factor: 0.1
+patience: 20
+min_lr: 1e-05
+
+data_path: /media/mengh/SharedData/hanyu/Adaptive_PCEN/
+dataset: FMA_Small # ['CREMAD', 'FMA_Small', 'ESC50', 'VoxCeleb1']
+num_workers: 4
+eval_pad: drop
+eval_overlap: 0.0
+
+save_best_model: acc
+overwrite_save: true
+# save_every: 1  
+
+frontend: Simplify_AdaLeaf # ['SimplifyLeaf', 'Leaf', 'Fixed_Leaf', 'Simplify_AdaLeaf']
+input_size: 16000
+
+compression: PCEN
+pcen_learn_logs: false
+
+# Set the frozen layers
+fixed_filter: true # Set the filtering and pooling layer not learnable
+fixed_PCEN: false # Set some PCEN compression parameters not learnable
+fixed_all_PCEN: false # Set all PCEN compression parameters not learnable
+fixed_backend: false #  Set the backend not learnable
+
+# different data types
+dynamic: false # Set the data type to dynamic, or static
+data_type: clean # ['clean', 'complex']
+
