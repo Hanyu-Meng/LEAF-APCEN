@@ -8,30 +8,29 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator, MaxNLocator, LinearLocator, FormatStrFormatter
 
 def load_wav_for_model(wav_path, target_sr=16000, max_len=16000):
-    wav, sr = torchaudio.load(wav_path)  # wav: (C, T)
+    wav, sr = torchaudio.load(wav_path)
     if wav.shape[0] > 1:
         wav = wav.mean(dim=0, keepdim=True)
     if sr != target_sr:
         wav = torchaudio.functional.resample(wav, sr, target_sr)
-    wav = wav.squeeze(0)  # (T,)
+    wav = wav.squeeze(0) 
     T = wav.shape[0]
-    # Pad or crop to max_len (1s)
     if T >= max_len:
         wav = wav[:max_len]
     else:
         wav = torch.nn.functional.pad(wav, (0, max_len - T))
-    # Add batch and channel dims: (1, 1, L)
     wav = wav.unsqueeze(0).unsqueeze(0)
     return wav
 
-# --- Model parameters (match your training config) ---
+# --- Model parameters ---
 n_filters = 40
 sample_rate = 16000
 window_len = 25.0
 window_stride = 10.0
 min_freq = 60.0
 max_freq = 7800.0
-dataset = 'CREMAD'  # 'ESC50', 'SpeechCOM_V1_30', 'SpeechCOM_V2', 'VoxCeleb1', 'GTZAN', 'CREMAD', 'IEMOCAP', 'FMA_Small', 'FMA_Medium'
+dataset = 'CREMAD'  # 'ESC50', 'VoxCeleb1', 'CREMAD', 'FMA_Small'
+
 # -------- audio calssification task -------- #
 if dataset == 'ESC50': num_classes=50
 elif dataset == 'SpeechCOM_V1_30': num_classes=30
@@ -43,7 +42,7 @@ elif dataset == 'IEMOCAP': num_classes=4
 elif dataset == 'FMA_Small': num_classes=8
 elif dataset == 'FMA_Medium': num_classes=16
 
-# --- Build frontend (LEAF, not Simplify_AdaLeaf) ---
+# --- Build frontend ---
 compression_fn = PCEN(num_bands=n_filters,
                       s=0.04,
                       alpha=0.96,
@@ -74,32 +73,29 @@ network = AudioClassifier(
 )
 
 # --- Load checkpoint ---
-ckpt_path = "/media/mengh/SharedData/hanyu/Adaptive_PCEN/new_adaptive_pcen/test_models/complex_LEAF/CREMAD/epoch_146.pth"  # <-- change this
+ckpt_path = "/media/mengh/SharedData/hanyu/Adaptive_PCEN/new_adaptive_pcen/test_models/complex_LEAF/CREMAD/epoch_146.pth" 
 state = torch.load(ckpt_path, map_location="cuda")
 network.load_state_dict(state, strict=False)
 network.eval()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 network = network.to(device)
-# wav_path = "/media/mengh/SharedData/hanyu/Adaptive_PCEN/new_adaptive_pcen/audios/1001_IWW_SAD_XX.wav"
 wav_path = "/media/mengh/SharedData/hanyu/Adaptive_PCEN/new_adaptive_pcen/audios/1001_IWW_SAD_XX_babble_1.51.wav"
 wav_tensor = load_wav_for_model(wav_path, target_sr=16000)
 wav_tensor = wav_tensor.to(device)
 
-# For Simplify_AdaLeaf, you may need to frame the waveform if your model expects [B, T, L]
-# Example: frame into overlapping windows (20ms frame, 10ms hop)
 frame_len = 400   # 25ms @ 16kHz
 hop = 160         # 10ms @ 16kHz
-frames = wav_tensor.unfold(-1, frame_len, hop)  # shape: (1, 1, num_frames, frame_len)
-frames = frames.squeeze(1)  # (1, num_frames, frame_len)
+frames = wav_tensor.unfold(-1, frame_len, hop)  
+frames = frames.squeeze(1) 
 
 # Inference
 frontend.eval()
 with torch.no_grad():
     num_frames = frames.shape[1]
-    pcen_outputs = []        # [B, T, n_filters]
+    pcen_outputs = []      
     pcen_outputs = frontend(wav_tensor)
-    pcen_energy_db = 10 * np.log10(pcen_outputs.squeeze(0).cpu().numpy() + 1e-12)  # [T, n_filters]
+    pcen_energy_db = 10 * np.log10(pcen_outputs.squeeze(0).cpu().numpy() + 1e-12) 
 
 with plt.rc_context({
     "font.family": "serif",
@@ -111,29 +107,21 @@ with plt.rc_context({
     )
     plt.xlim(0, 98)
     plt.ylim(0, 39)
-    # colorbar: larger font + more controllable ticks
     cbar = plt.colorbar(im)
     cbar.set_label('Energy (dB)', fontsize=15)
-    cbar.locator = LinearLocator(numticks=3)            # increase/decrease ticks here (e.g., 5, 7, 9)
-    cbar.formatter = FormatStrFormatter('%.0f')         # cleaner dB labels
+    cbar.locator = LinearLocator(numticks=3)           
+    cbar.formatter = FormatStrFormatter('%.0f')      
     cbar.update_ticks()
     cbar.ax.tick_params(labelsize=14)
-
-    # larger axis labels
     plt.xlabel('Frame Index', fontsize=16)
     plt.ylabel('Filter Index', fontsize=16)
-    # plt.title('LEAF-PCEN Output Energy (dB)', fontsize=16)
-
-    # more ticks + larger tick labels
     ax = plt.gca()
     ax.set_facecolor("none")
-    ax.xaxis.set_major_locator(MultipleLocator(20))     # major ticks every 20 frames
-    ax.xaxis.set_minor_locator(MultipleLocator(10))     # minor ticks every 10 frames
-    ax.yaxis.set_major_locator(MaxNLocator(nbins=4))    # ~4 y ticks automatically
-
+    ax.xaxis.set_major_locator(MultipleLocator(20))    
+    ax.xaxis.set_minor_locator(MultipleLocator(10))    
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=4)) 
     ax.tick_params(axis='both', which='major', labelsize=14, length=6, width=1)
     ax.tick_params(axis='both', which='minor', labelsize=12, length=3, width=0.8)
-
     plt.tight_layout()
     plt.savefig(
         '/media/mengh/SharedData/hanyu/Adaptive_PCEN/new_adaptive_pcen/leaf_pcen_output_energy_db.png',

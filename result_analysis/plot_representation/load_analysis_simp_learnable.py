@@ -22,14 +22,14 @@ def load_wav_for_model(wav_path, target_sr=16000, max_len=16000):
     wav = wav.unsqueeze(0).unsqueeze(0)
     return wav
 
-# --- Model parameters (match your training config) ---
+# --- Model parameters ---
 n_filters = 40
 sample_rate = 16000
 window_len = 25.0
 window_stride = 10.0
 min_freq = 60.0
 max_freq = 7800.0
-dataset = 'CREMAD'  # change as needed
+dataset = 'CREMAD'
 
 if dataset == 'ESC50': num_classes=50
 elif dataset == 'SpeechCOM_V1_30': num_classes=30
@@ -72,14 +72,13 @@ network = AudioClassifier(
 )
 
 # --- Load checkpoint ---
-ckpt_path = "/media/mengh/SharedData/hanyu/Adaptive_PCEN/new_adaptive_pcen/test_models/complex_SimpLEAF/CREMAD/epoch_149.pth"  # <-- change this
+ckpt_path = "/media/mengh/SharedData/hanyu/Adaptive_PCEN/new_adaptive_pcen/test_models/complex_SimpLEAF/CREMAD/epoch_149.pth" 
 state = torch.load(ckpt_path, map_location="cuda")
 network.load_state_dict(state, strict=False)
 network.eval()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 network = network.to(device)
-# wav_path = "/media/mengh/SharedData/hanyu/Adaptive_PCEN/new_adaptive_pcen/audios/1001_IWW_SAD_XX.wav"
 wav_path = "/media/mengh/SharedData/hanyu/Adaptive_PCEN/new_adaptive_pcen/audios/1001_IWW_SAD_XX_babble_1.51.wav"
 wav_tensor = load_wav_for_model(wav_path, target_sr=32000)
 wav_tensor = wav_tensor.to(device)
@@ -87,57 +86,43 @@ wav_tensor = wav_tensor.to(device)
 # Frame the waveform
 frame_len = 400   # 25ms @ 16kHz
 hop = 160         # 10ms @ 16kHz
-frames = wav_tensor.unfold(-1, frame_len, hop)  # shape: (1, 1, num_frames, frame_len)
-frames = frames.squeeze(1)  # (1, num_frames, frame_len)
+frames = wav_tensor.unfold(-1, frame_len, hop) 
+frames = frames.squeeze(1) 
 
-# Inference: get representation after PCEN
+# Inference: get representation after SimpPCEN
 frontend.eval()
 with torch.no_grad():
     num_frames = frames.shape[1]
     pcen_outputs = []
-    # for i in range(num_frames):
-    #     cur_wave = frames[:, i, :].unsqueeze(1)  # [B, 1, L]
-    #     pcen_out = frontend(cur_wave)            # [B, n_filters, W]
-    #     pcen_outputs.append(pcen_out)
     pcen_outputs = frontend(wav_tensor)
-    # pcen_outputs = torch.stack(pcen_outputs, dim=1)  # [B, T, n_filters, W]
-    # pcen_energy = pcen_outputs.mean(dim=-1)          # [B, T, n_filters]
-    pcen_energy_db = 10 * np.log10(pcen_outputs.squeeze(0).cpu().numpy() + 1e-12)  # [T, n_filters]
+    pcen_energy_db = 10 * np.log10(pcen_outputs.squeeze(0).cpu().numpy() + 1e-12)
 
 with plt.rc_context({
     "font.family": "serif",
     "font.serif": ["Times New Roman", "Times", "Nimbus Roman", "STIXGeneral", "DejaVu Serif"]
 }):
-    # Plot
+
     plt.figure(figsize=(4, 2.3))
     im = plt.imshow(
         pcen_energy_db, aspect='auto', origin='lower', interpolation='nearest', cmap='inferno'
     )
     plt.xlim(0, 98)
     plt.ylim(0, 39)
-    # colorbar: 大字体 + 可控刻度数
     cbar = plt.colorbar(im)
     cbar.set_label('Energy (dB)', fontsize=15)
-    cbar.locator = LinearLocator(numticks=3)          # 想更密就换成 5/7/9
+    cbar.locator = LinearLocator(numticks=3)      
     cbar.formatter = FormatStrFormatter('%.0f')
     cbar.update_ticks()
     cbar.ax.tick_params(labelsize=14)
-
-    # 坐标轴标签
     plt.xlabel('Frame Index', fontsize=16)
     plt.ylabel('Filter Index', fontsize=16)
-    # plt.title('Leaf-SimpPCEN Output Energy (dB)', fontsize=16)
-
-    # 坐标轴刻度与字号
     ax = plt.gca()
     ax.set_facecolor("none")
-    ax.xaxis.set_major_locator(MultipleLocator(20))   # 主刻度：每 20 帧
-    ax.xaxis.set_minor_locator(MultipleLocator(10))   # 次刻度：每 10 帧
-    ax.yaxis.set_major_locator(MaxNLocator(nbins=4))  # y 轴 ~4 个主刻度
-
+    ax.xaxis.set_major_locator(MultipleLocator(20))  
+    ax.xaxis.set_minor_locator(MultipleLocator(10))   
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=4)) 
     ax.tick_params(axis='both', which='major', labelsize=14, length=6, width=1)
     ax.tick_params(axis='both', which='minor', labelsize=12, length=3, width=0.8)
-
     plt.tight_layout()
     plt.savefig(
         '/media/mengh/SharedData/hanyu/Adaptive_PCEN/new_adaptive_pcen/simplifyleaf_pcen_output_energy_db.png',
