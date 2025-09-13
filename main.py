@@ -308,7 +308,6 @@ def main(args):
         compression_fn = Simplify_PCEN(num_bands=n_filters,
                 s=0.04,
                 alpha=0.48,
-                delta=2.0,
                 r=0.5,
                 eps=1e-12,
                 learn_logs=args.pcen_learn_logs,

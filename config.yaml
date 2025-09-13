@@ -1,8 +1,6 @@
-# config.yaml for Leaf training and evaluation
+# config.yaml for LEAF-APCEN training and evaluation
 # change frontend, only need to change the frontend argument
 # for clean data, set dynamic to false
-# for dynamic noisy data, set the data_type to babble, or music
-# for dynamic loudness data, set, the data_type to loudness
 train: true
 eval: false
 comment: "revised_20250913"
@@ -66,7 +64,7 @@ save_best_model: acc
 overwrite_save: true
 # save_every: 1  
 
-frontend: Fixed_Leaf # ['SimplifyLeaf', 'Leaf', 'Fixed_Leaf', 'Simplify_AdaLeaf']
+frontend: Simplify_AdaLeaf # ['SimplifyLeaf', 'Leaf', 'Fixed_Leaf', 'Simplify_AdaLeaf']
 input_size: 16000
 
 compression: PCEN
@@ -79,6 +77,6 @@ fixed_all_PCEN: false # Set all PCEN compression parameters not learnable
 fixed_backend: false #  Set the backend not learnable
 
 # different data types
-dynamic: false # Set the data type to dynamic, or static
+dynamic: false # Set the data type to dynamic, or static, to run the complex test, set it to true
 data_type: clean # ['clean', 'complex']
 

@@ -1,5 +1,6 @@
 # Pytorch implementation of LEAF
 # based on https://github.com/google-research/leaf-audio with simplifications
+# take reference on 
 from typing import Optional
 import numpy as np
 import torch
@@ -98,7 +99,6 @@ class GaborFilterbank(nn.Module):
         filters = torch.cat((filters.real, filters.imag), dim=0).unsqueeze(1)
         # convolve with filters
         x = F.conv1d(x, filters, padding=self.filter_size // 2)
-        # compute squared modulus
         x = x ** 2
         x = x[:, :self.n_filters] + x[:, self.n_filters:]
         # compute pooling windows
@@ -156,7 +156,6 @@ class PCEN(nn.Module):
         if self.clamp is not None:
             x = x.clamp(min=self.clamp)
 
-        # prepare parameters
         if self.learn_logs:
             # learns logarithm of each parameter
             s = self.s.exp()
@@ -167,7 +166,7 @@ class PCEN(nn.Module):
             # learns inverse of r, and all other parameters directly
             s = self.s
             alpha = self.alpha.clamp(max=1)
-            delta = self.delta.clamp(min=0)  # unclamped in original LEAF impl.
+            delta = self.delta.clamp(min=0)  
             r = 1. / self.r.clamp(min=1)
         # broadcast over channel dimension
         alpha = alpha[:, np.newaxis]
@@ -175,16 +174,12 @@ class PCEN(nn.Module):
         r = r[:, np.newaxis]
 
         # compute smoother
-        smoother = [x[..., 0]]  # initialize the smoother with the first frame
+        smoother = [x[..., 0]] 
         for frame in range(1, x.shape[-1]):
             smoother.append((1 - s) * smoother[-1] + s * x[..., frame])
         smoother = torch.stack(smoother, -1)
 
-        # stable reformulation due to Vincent Lostanlen; original formula was:
         return (x / (self.eps + smoother)**alpha + delta)**r - delta**r
-        # smoother = torch.exp(-alpha * (torch.log(self.eps) +
-        #                                torch.log1p(smoother / self.eps)))
-        # return (x * smoother + delta)**r - delta**r
 
 class Simplify_PCEN(nn.Module):
     """
@@ -206,24 +201,19 @@ class Simplify_PCEN(nn.Module):
         clamp: If given, clamps the input to the given minimum value before
           applying PCEN.
     """
-    def __init__(self, num_bands: int, s: float=0.025, alpha: float=1.,
-                 delta: float=1., r: float=1., eps: float=1e-6,
+    def __init__(self, num_bands: int, s: float=0.025, alpha: float=1., r: float=1., eps: float=1e-6,
                  learn_logs: bool=False, clamp: Optional[float]=None):
         super(Simplify_PCEN, self).__init__()
         if learn_logs:
             # learns logarithm of each parameter
-            s = np.log(s)
             alpha = np.log(alpha)
-            # delta = np.log(delta)
             r = np.log(r)
         else:
             # learns inverse of r, and all other parameters directly
             r = 1. / r
         self.learn_logs = learn_logs
-        # self.s = nn.Parameter(torch.full((num_bands,), float(s)))
         self.s = s
         self.alpha = nn.Parameter(torch.full((num_bands,), float(alpha)))
-        # self.delta = nn.Parameter(torch.full((num_bands,), float(delta)))
         self.r = nn.Parameter(torch.full((num_bands,), float(r)))
         self.eps = torch.as_tensor(eps)
         self.clamp = clamp
@@ -244,26 +234,18 @@ class Simplify_PCEN(nn.Module):
             # learns inverse of r, and all other parameters directly
             s = self.s
             alpha = self.alpha.clamp(max=1)
-            # delta = self.delta.clamp(min=0)  # unclamped in original LEAF impl.
             r = 1. / self.r.clamp(min=1)
-        # broadcast over channel dimension
+
         alpha = alpha[:, np.newaxis]
-        # delta = delta[:, np.newaxis]
         r = r[:, np.newaxis]
 
         # compute smoother
-        smoother = [x[..., 0]]  # initialize the smoother with the first frame
+        smoother = [x[..., 0]] 
         for frame in range(1, x.shape[-1]):
             smoother.append((1 - s) * smoother[-1] + s * x[..., frame])
         smoother = torch.stack(smoother, -1)
 
-        # stable reformulation due to Vincent Lostanlen; original formula was:
-        # return (input / (self.eps + smoother)**alpha + delta)**r - delta**r
-        # smoother = torch.exp(-alpha * (torch.log(self.eps) +
-        #                                torch.log1p(smoother / self.eps)))
         output = (x ** r) / ((smoother + self.eps) ** alpha)
-        # output = x ** r
-        # return (x**r)*smoother
         return output 
 
 class Leaf(nn.Module):
@@ -310,8 +292,7 @@ class Leaf(nn.Module):
     def forward(self, x: torch.tensor):
         while x.ndim < 3:
             x = x[:, np.newaxis]
-        x = self.filterbank(x) # size
-        # calculate the energy distributions of each frequency band.
+        x = self.filterbank(x) 
         x = self.compression(x)
         return x
 
@@ -326,49 +307,3 @@ class Log_Compress(nn.Module):
 #
     def forward(self, x):
           return log_compression(x)
-
-class Simplify_PCEN_v2(nn.Module):
-    def __init__(self, num_bands: int, s: float=0.025, r: float=1., eps: float=1e-6,
-                 learn_logs: bool=False, clamp: Optional[float]=None):
-        super(Simplify_PCEN_v2, self).__init__()
-        if learn_logs:
-            # learns logarithm of each parameter
-            s = np.log(s)
-            alpha = np.log(alpha)
-            r = np.log(r)
-        else:
-            # learns inverse of r, and all other parameters directly
-            r = 1. / r
-        self.learn_logs = learn_logs
-        self.s = s
-        self.r = nn.Parameter(torch.full((num_bands,), float(r)))
-        self.eps = torch.as_tensor(eps)
-        self.clamp = clamp
-
-    def forward(self, x):
-        # clamp if needed
-        if self.clamp is not None:
-            x = x.clamp(min=self.clamp)
-
-        # prepare parameters
-        if self.learn_logs:
-            # learns logarithm of each parameter
-            s = self.s.exp()
-            # delta = self.delta.exp()
-            r = self.r.exp()
-        else:
-            # learns inverse of r, and all other parameters directly
-            s = self.s
-            r = 1. / self.r.clamp(min=1)
-
-        # delta = delta[:, np.newaxis]
-        r = r[:, np.newaxis]
-
-        # compute smoother
-        smoother = [x[..., 0]]  # initialize the smoother with the first frame
-        for frame in range(1, x.shape[-1]):
-            smoother.append((1 - s) * smoother[-1] + s * x[..., frame])
-        smoother = torch.stack(smoother, -1)
-        output = (x ** r) / ((smoother + self.eps) ** r)
-
-        return output 

@@ -1,4 +1,4 @@
-# models/adaleaf.py --> AdaDRC
+# models/adaleaf.py --> Adaptive PCEN (APCEN) version of LEAF
 # Author: Hanyu Meng
 # Date: 2025-05-30
 # Description: Adaptive LEAF frontend with PCEN using dynamic per-frame parameter prediction from PCEN controller.
@@ -9,22 +9,7 @@ import torch.nn.functional as F
 import numpy as np
 from .leaf import gabor_filters, gauss_windows, mel_filter_params
 from typing import Optional
-import math
 
-def freq_normalize_with_E(E: torch.Tensor, eps: float = 1e-6):
-    # shape-massage Eprev to [B, 1, 3] for broadcasting over the 40 bands
-    if E.dim() == 2:         # [B, 3]
-        E_sum = E.unsqueeze(1)   # -> [B, 1, 3]
-    elif E.dim() == 1:       # [B]
-        E_sum= E.view(-1, 1, 1) # -> [B, 1, 1]
-    else:
-        E_sum = E
-    # if Eprev accidentally has a frequency dimension, collapse it
-    if E_sum.shape[1] != 1:
-        E_sum = E_sum.sum(dim=1, keepdim=True)
-
-    E_norm = E / (E_sum + eps)   # [B, 40, 3]
-    return E_norm
 
 class FixedGaborFilterbank(nn.Module):
     """
@@ -190,52 +175,6 @@ class PCENController(nn.Module):
         alpha = torch.sigmoid(a_hat).view(B, F, 1)  # (0,1)
         r = (self.r_min + (self.r_max - self.r_min) * torch.sigmoid(r_hat)).view(B, F, 1)
         return alpha, r, h
-
-class AdaptivePCEN(nn.Module):
-    """
-    Adaptive PCEN using dynamic per-frame parameter prediction from PPN.
-    Follows the formulation:
-        PCEN_t = ((X_t / (M_t + eps)^alpha + delta)^r) - delta^r
-        M_t = (1 - s) * M_{t-1} + s * X_t
-
-    Args:
-        eps: Small constant for numerical stability
-        clamp: Optional minimum clamp value on input
-    """
-    def __init__(self, eps: float = 1e-6, clamp: Optional[float] = None):
-        super().__init__()
-        self.eps = eps
-        self.clamp = clamp
-
-    def forward(self, X: torch.Tensor, ppn):
-        """
-        Args:
-            X: [B, F, T] input energy (STFT magnitude squared or similar)
-            ppn: module that takes X[..., t-1], X[..., t] and returns (s, alpha, delta, r)
-
-        Returns:
-            PCEN-transformed tensor of shape [B, F, T]
-        """
-        B, F, T = X.shape
-        M_prev = torch.zeros(B, F, device=X.device)
-        outputs = []
-        for t in range(T):
-            X_t = X[:, :, t]
-            X_prev = X[:, :, t - 1] if t > 0 else X_t
-            if self.clamp is not None:
-                X_t = X_t.clamp(min=self.clamp)
-                X_prev = X_prev.clamp(min=self.clamp)
-
-            s, alpha, delta, r = ppn((X_prev, X_t), dim=-1)
-            M_t = (1 - s) * M_prev + s * X_t
-
-            # === Apply PCEN ===
-            norm = (X_t / (M_t + self.eps).pow(alpha) + delta).pow(r)
-            PCEN_t = norm - delta.pow(r)
-            
-            outputs.append(PCEN_t)
-            M_prev = M_t
-        return torch.stack(outputs, dim=-1)  # [B, F, T]
 
 class Simplify_AdaptivePCEN(nn.Module):
     """
