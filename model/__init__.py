@@ -28,7 +28,7 @@ class AudioClassifier(torch.nn.Module):
         if self._frontend is not None:
             output = self._frontend(output)  # pylint: disable=not-callable
             if output.ndim == 3:
-                output = output[:,None,:,:] #add 1 "color" channel
+                output = output[:,None,:,:] # add 1 "color" channel
         if self._encoder:
             output = self._encoder(output)
         output = self._pool(output)

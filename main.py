@@ -26,7 +26,7 @@ from model.adaleaf import *
 from utils import optimizer_to, scheduler_to
 import warnings
 warnings.filterwarnings("ignore", category=UserWarning, module='hydra')
-# from args import get_args
+
 # Default LEAF parameters
 n_filters = 40
 sample_rate = 16000
@@ -59,8 +59,8 @@ def set_frozen_layers(network, args):
         params = [p for p in network.parameters() if id(p) not in frontend_ids]
         
     total, trainable = count_parameters(network)
-    print(f"✅ Total parameters: {total:,}")
-    print(f"✅ Trainable parameters: {trainable:,}")
+    print(f"Total parameters: {total:,}")
+    print(f"Trainable parameters: {trainable:,}")
 
     return network
 
@@ -105,7 +105,6 @@ def infer(args, network, device):
     model_path = os.path.join(args.model_path, model_tag) + '/epoch_{}.pth'.format(args.epoch)
     network.load_state_dict(torch.load(model_path, map_location=device))
     network.eval()
-    # pdb.set_trace()
     for batch_x, batch_y in tqdm(dev_loader):
         if args.frontend == 'Ada_FE': batch_x = batch_x.squeeze(0)
         batch_size = batch_x.size(0)
@@ -180,7 +179,7 @@ def train_epoch(args, train_loader, network, lr, optim, device):
         filtered = torch.zeros((batch_size, n_filters, num_frames*batch_x.size(2))).to(device)
         num_total += batch_size
         i += 1
-        batch_x = Variable(batch_x.to(device).contiguous()) # no need for new version of pytorch
+        batch_x = Variable(batch_x.to(device).contiguous()) 
         # batch_y --> [B]--> for label
         batch_y = Variable(batch_y.view(-1).to(device).contiguous())
         batch_out = network(batch_x) if args.frontend == 'Simplify_AdaLeaf' else network(batch_x) # Leaf, SincNet, tdfbanks, AdaLeaf, SimplifyLeaf
@@ -196,7 +195,6 @@ def train_epoch(args, train_loader, network, lr, optim, device):
 
     running_loss /= num_total
     train_accuracy = (num_correct / num_total) * 100
-    # print(train_accuracy)
     return running_loss, train_accuracy
 
 def train(args, network):
@@ -276,14 +274,9 @@ def main(args):
 
     # -------- audio calssification task -------- #
     if args.dataset == 'ESC50': num_classes=50
-    elif args.dataset == 'SpeechCOM_V1_30': num_classes=30
-    elif args.dataset == 'SpeechCOM_V2': num_classes=35
     elif args.dataset == 'VoxCeleb1': num_classes=1251
-    elif args.dataset == 'GTZAN': num_classes=10
     elif args.dataset == 'CREMAD': num_classes=6
-    elif args.dataset == 'IEMOCAP': num_classes=4
     elif args.dataset == 'FMA_Small': num_classes=8
-    elif args.dataset == 'FMA_Medium': num_classes=16
 
     # ------ back end ----- #
     # load the encoder --> efficientnet-b0
@@ -310,18 +303,8 @@ def main(args):
                         window_len=window_len,
                         window_stride=window_stride,
                         compression=compression_fn)
-
-    elif args.frontend == 'AdaLeaf':
-        compression_fn = AdaptivePCEN()     
-        frontend = AdaptiveLeaf(n_filters=n_filters,
-                        min_freq=min_freq,
-                        max_freq=max_freq,
-                        sample_rate=sample_rate,
-                        window_len=window_len,
-                        window_stride=window_stride,
-                        compression=compression_fn)
         
-    elif args.frontend == 'SimplifyLeaf' or args.frontend == 'Fixed_SimplifyLeaf':
+    elif args.frontend == 'SimplifyLeaf':
         compression_fn = Simplify_PCEN(num_bands=n_filters,
                 s=0.04,
                 alpha=0.48,

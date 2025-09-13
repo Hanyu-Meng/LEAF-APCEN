@@ -23,7 +23,6 @@ def set_random_seed(random_seed, args=None):
       random_seed: integer random seed
       args: argue parser
     """
-
     # initialization
     torch.manual_seed(random_seed)
     random.seed(random_seed)
