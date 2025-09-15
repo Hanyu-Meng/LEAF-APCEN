@@ -20,3 +20,6 @@ The Run training with:
 ```bash
 python main.py
 ```
+
+### Inference & Analysis
+- Use `result_analysis/plot_representation/load_analysis_adaptive.py`, `result_analysis/plot_representation/load_analysis_learnable.py`, etc., to extract and visualize filterbank and PCEN representations (corresponding to Fig.5 in the paper).
