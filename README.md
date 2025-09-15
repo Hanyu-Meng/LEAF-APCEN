@@ -13,6 +13,26 @@ The LEAF-APCEN is a novel adaptive front-end based on LEAF with simplified PCEN 
 
 ## Usage
 
+## Requirements
+
+- torch >= 2.7.0
+- torchaudio == 2.7.0
+- efficientnet_pytorch
+- numpy == 1.26.4
+- matplotlib == 3.9.2
+- pandas == 2.2.2
+- tqdm
+- omegaconf
+- hydra-core
+- librosa
+- soundfile
+- scipy
+
+Install all dependencies with:
+
+```bash
+pip install -r requirements.txt
+```
 ### Training
 First edit `config.yaml` to set dataset, frontend, and training parameters. Note that if you use complex dataset, you should set the dynamic in config.yaml as True, and set the data_type as clean.
 
