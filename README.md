@@ -7,4 +7,4 @@ The LEAF-APCEN is a novel adaptive front-end based on LEAF with simplified PCEN 
 
 ![Model Archirtecture](images/Adaptive_PCEN_model_v2.png)
 
-![Neural Adaptive Controller](images/Adaptive_PCEN_controller.png)
+<img src="images/Adaptive_PCEN_controller.png" alt="Neural Adaptive Controller" width="400"/>
