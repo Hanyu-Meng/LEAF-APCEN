@@ -3,10 +3,20 @@
 The Official Implementation of ICASSP2026 submission of LEAF-APCEN paper. Including all experiments and analysis in the paper.
 
 ## About LEAF-APCEN
-The LEAF-APCEN is a novel adaptive front-end based on LEAF with simplified PCEN that tune the two parameters in PCEN by an adaptive neural controller as shown in the figure below.
+The LEAF-APCEN is a novel adaptive front-end based on LEAF with simplified PCEN that tune the two parameters in PCEN by an adaptive neural controller as shown in the figures below.
 
 ## Model Architecture
 ![Model Archirtecture](images/Adaptive_PCEN_model_v2.png)
 
 ## Neural Adaptive Controller
 <img src="images/Adaptive_PCEN_controller.png" alt="Neural Adaptive Controller" width="400"/>
+
+## Usage
+
+### Training
+First edit `config.yaml` to set dataset, frontend, and training parameters. Note that if you use complex dataset, you should set the dynamic in config.yaml as True, and set the data_type as clean.
+
+The Run training with:
+```bash
+python main.py
+```
