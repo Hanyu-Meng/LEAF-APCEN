@@ -5,6 +5,8 @@ The Official Implementation of ICASSP2026 submission of LEAF-APCEN paper. Includ
 ## About LEAF-APCEN
 The LEAF-APCEN is a novel adaptive front-end based on LEAF with simplified PCEN that tune the two parameters in PCEN by an adaptive neural controller as shown in the figure below.
 
+## Model Architecture
 ![Model Archirtecture](images/Adaptive_PCEN_model_v2.png)
 
+## Neural Adaptive Controller
 <img src="images/Adaptive_PCEN_controller.png" alt="Neural Adaptive Controller" width="400"/>
