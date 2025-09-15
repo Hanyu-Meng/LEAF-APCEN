@@ -36,9 +36,9 @@ device: cuda
 resume: true
 cudnn_benchmark: true
 
-batch_size: 100
+batch_size: 256
 batch_size_eval: 0
-num_epochs: 300
+num_epochs: 150
 start_epoch: 1
 save_every: 5      
 test_every_epoch: false

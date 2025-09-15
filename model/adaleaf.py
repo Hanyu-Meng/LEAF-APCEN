@@ -190,7 +190,7 @@ class Simplify_AdaptivePCEN(nn.Module):
         super().__init__()
         self.eps = eps
         self.clamp = clamp
-        self.init_s = init_s  # Initial value for s, used in the first frame
+        self.init_s = init_s 
         self.init_alpha = init_alpha
         self.init_r = init_r
 
